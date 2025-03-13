@@ -4,11 +4,15 @@ import serial
 import websockets
 import socket
 
-ser = serial.Serial('/dev/cu.usbserial-210', 115200, timeout=1)
+# ser = serial.Serial('/dev/cu.usbserial-210', 115200, timeout=1)
 
-boat_x, boat_y = 10.0, 20.0
+boat_x, boat_y = 63.417878, 10.402178
 
 clients = set()
+
+
+x_offset = 0
+y_offset = 0
 
 
 def get_ip_address():
@@ -26,22 +30,26 @@ def get_ip_address():
 
 async def send_position():
     """Reads data from serial and broadcasts it via WebSocket."""
-    global boat_x, boat_y
+    global boat_x, boat_y, x_offset, y_offset
     while True:
         try:
-            line = ser.readline().decode('utf-8').strip()
-            if line:
-                parts = line.split()
+            # line = ser.readline().decode('utf-8').strip()
+            # if line:
+                # parts = line.split()
 
-                if len(parts) != 2:
-                    raise ValueError
+                # if len(parts) != 2:
+                #     raise ValueError
 
-                x_offset, y_offset = map(float, parts)
+                # x_offset, y_offset = map(float, parts)
 
-                sea_guardian_x = boat_x + x_offset
-                sea_guardian_y = boat_y + y_offset
+                x_offset += 1
+                y_offset += 1
 
-                position = {"lat": sea_guardian_x/1000, "lng": sea_guardian_y/1000}
+
+                sea_guardian_x = boat_x + x_offset/1000
+                sea_guardian_y = boat_y + y_offset/1000
+
+                position = {"lat": sea_guardian_x, "lng": sea_guardian_y}
                 print(f"Broadcasting: {position}")
 
                 # Broadcast position to all connected clients
