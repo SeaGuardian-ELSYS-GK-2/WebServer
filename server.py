@@ -1,26 +1,12 @@
 import asyncio
 import json
 import websockets
-import socket
 
 
 vessel_connections: set[websockets.WebSocketServerProtocol] = set()
 viewer_connections: set[websockets.WebSocketServerProtocol] = set()
 
 vessel_data: dict[dict] = {}
-
-
-def get_ip_address():
-    """Returns the IP address of the server"""
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except Exception as e:
-        print(f"Error getting IP address: {e}")
-        return "Unknown"
 
 
 async def broadcast_updates(update_queue: asyncio.Queue):
@@ -109,9 +95,6 @@ async def handler(websocket: websockets.WebSocketServerProtocol, update_queue: a
 
 
 async def main():
-    local_ip = get_ip_address()
-    print(f"WebSocket server running on ws://{local_ip}:8000")
-
     update_queue = asyncio.Queue()
 
     async def handler_with_queue(websocket):

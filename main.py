@@ -1,17 +1,11 @@
-import asyncio
-import json
-import websockets
+import subprocess
+import time
+import os
+import sys
 import socket
 
 
-boats: set[websockets.WebSocketServerProtocol] = set()
-viewers: set[websockets.WebSocketServerProtocol] = set()
-
-boat_data = {}
-
-
 def get_ip_address():
-    """Returns the IP address of the server"""
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
@@ -20,107 +14,66 @@ def get_ip_address():
         return ip
     except Exception as e:
         print(f"Error getting IP address: {e}")
-        return "Unknown"
+        sys.exit()
 
 
-async def broadcast_updates(update_queue: asyncio.Queue):
-    """Wait for updates and broadcast them to all viewers."""
-    while True:
-        boat_id, data = await update_queue.get()
-
-        # Update global state
-        boat_data[boat_id] = data
-
-        message = json.dumps({
-            "type": "boat_update",
-            "id": boat_id,
-            "position": data
-        })
-
-        # Send to all connected viewers
-        dead = set()
-        for viewer in viewers:
-            try:
-                await viewer.send(message)
-            except:
-                dead.add(viewer)
-
-        # Clean up disconnected viewers
-        for v in dead:
-            viewers.discard(v)
+def launch_server(ip, port, log_file):
+    return subprocess.Popen(
+        ["python", "-u", "server.py", "--host", ip, "--port", str(port)],
+        stdout=open(log_file, "w"),
+        stderr=subprocess.STDOUT
+    )
 
 
-async def handler(websocket: websockets.WebSocketServerProtocol, update_queue: asyncio.Queue):
-    """Handler for new connections"""
-    try:
-        init_message = await websocket.recv()
-        data: dict = json.loads(init_message)
-
-        client_type = data.get("type")
-
-        if client_type == "boat":
-            boat_id = data.get("id")
-            if not boat_id:
-                await websocket.send(json.dumps({"error": "Boat must have an ID"}))
-                return
-
-            boats.add(websocket)
-            print(f"Boat {boat_id} connected: {websocket.remote_address}")
-
-            async for message in websocket:
-                try:
-                    data: dict = json.loads(message)
-                    if data.get("timestamp") > boat_data.get("timestamp"):
-                        await update_queue.put((boat_id, data))
-                except json.JSONDecodeError:
-                    print(f"Invalid JSON data received from boat {boat_id}: {message}")
+def launch_vessel(vessel_id, path, ip, port, log_dir):
+    return subprocess.Popen(
+        ["python", "-u", "vessel.py",
+         "--id", str(vessel_id),
+         "--path", path,
+         "--host", ip,
+         "--port", str(port)],
+        stdout=open(os.path.join(log_dir, f"vessel_{vessel_id}.log"), "w"),
+        stderr=subprocess.STDOUT
+    )
 
 
-        elif client_type == "viewer":
-            viewers.add(websocket)
-            print(f"Viewer connected: {websocket.remote_address}")
+def main():
+    os.makedirs("logs", exist_ok=True)
 
-            # Send full boat data once
-            full_update = json.dumps({
-                "type": "full_update",
-                "boats": boat_data
-            })
-            await websocket.send(full_update)
+    ip = get_ip_address()
+    port = 8000
 
-            try:
-                await websocket.wait_closed()
-            finally:
-                viewers.discard(websocket)
+    print(f"Starting server at ws://{ip}:{port}")
+    server_process = launch_server(ip, port, "logs/server.log")
 
+    time.sleep(1)  # Give the server time to start
+    if server_process.poll() is not None:
+        print("Server process exited early! Check logs.")
+
+    vessel_configs = [
+        (1, "vessel_paths/1.json"),
+        (2, "vessel_paths/2.json"),
+        (3, "vessel_paths/3.json"),
+    ]
+
+    vessels = []
+    for vessel_id, path in vessel_configs:
+        print(f"Starting vessel {vessel_id}")
+        proc = launch_vessel(vessel_id, path, ip, port, "logs")
+        time.sleep(0.5)  # Give it a moment to initialize
+        if proc.poll() is not None:
+            print(f"Vessel {vessel_id} exited early! Check logs/vessel_{vessel_id}.log.")
         else:
-            print(f"Invalid client type tried to connect: {websocket.remote_address}")
-            await websocket.send(json.dumps({"error": "Invalid client type"}))
+            vessels.append(proc)
 
-    except websockets.exceptions.ConnectionClosed:
-        pass
-    except json.JSONDecodeError:
-        print("Invalid JSON from client", init_message)
-    finally:
-        if websocket in viewers:
-            viewers.discard(websocket)
-        if websocket in boats:
-            boats.discard(websocket)
+    print("All processes launched. Press Ctrl+C to stop.")
+    try:
+        server_process.wait()
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+        server_process.terminate()
+        for p in vessels:
+            p.terminate()
 
 
-async def main():
-    local_ip = get_ip_address()
-    print(f"WebSocket server running on ws://{local_ip}:8000")
-
-    update_queue = asyncio.Queue()
-
-    async def handler_with_queue(websocket):
-        await handler(websocket, update_queue)
-
-    async with websockets.serve(handler_with_queue, "0.0.0.0", 8000):
-        await asyncio.gather(
-            broadcast_updates(update_queue),
-            asyncio.Future(),  # Keeps the server alive
-        )
-
-
-asyncio.run(main())
+main()
