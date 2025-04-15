@@ -11,7 +11,7 @@ STEPS_PER_SEGMENT = SEGMENT_DURATION // STEP_DURATION
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--id", type=int, required=True)
+parser.add_argument("--id", type=str, required=True)
 parser.add_argument("--path", type=str, required=True)
 parser.add_argument("--host", type=str, default="localhost")
 parser.add_argument("--port", type=int, default=8000)
@@ -20,7 +20,7 @@ args = parser.parse_args()
 uri = f"ws://{args.host}:{args.port}"
 
 
-async def vessel_client(vessel_id: int, path_file: str, host: str, port: str):
+async def vessel_client(vessel_id: str, path_file: str, host: str, port: str):
     uri = f"ws://{host}:{port}"
 
     # Load path
@@ -48,12 +48,13 @@ async def vessel_client(vessel_id: int, path_file: str, host: str, port: str):
             for step in range(STEPS_PER_SEGMENT):
                 alpha = step / STEPS_PER_SEGMENT
                 lat = (1 - alpha) * start["lat"] + alpha * end["lat"]
-                lon = (1 - alpha) * start["lon"] + alpha * end["lon"]
+                lng = (1 - alpha) * start["lng"] + alpha * end["lng"]
 
                 data = {
+                    "id": vessel_id,
                     "timestamp": time.time(),
-                    "lon": lon,
-                    "lat": lat
+                    "lat": lat,
+                    "lng": lng
                 }
 
                 await websocket.send(json.dumps(data))

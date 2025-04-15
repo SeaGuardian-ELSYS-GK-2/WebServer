@@ -5,7 +5,8 @@ import sys
 import socket
 from rich.console import Console
 
-console = Console()
+HOST = "0.0.0.0"
+PORT = 8000
 
 
 def get_ip_address():
@@ -42,17 +43,13 @@ def launch_vessel(vessel_id, path, ip, port, log_dir):
 
 def main():
     os.makedirs("logs", exist_ok=True)
+    console = Console()
 
-    host = "0.0.0.0"
-    port = 8000
-
-    no_errors = True
-
-    print(f"Starting server: {host}:{port}")
-    server_process = launch_server(host, port)
+    print(f"Starting server: {HOST}:{PORT}")
+    server_process = launch_server(HOST, PORT)
 
     ip = get_ip_address()
-    console.print(f"Server can be reached from [bold blue]ws://{ip}:{port}[/]")
+    console.print(f"Server can be reached from [bold blue]ws://{ip}:{PORT}[/]")
 
     time.sleep(0.5)  # Give the server time to start
     if server_process.poll() is not None:
@@ -65,10 +62,12 @@ def main():
         (3, "vessel_paths/3.json"),
     ]
 
+    no_errors = True
+
     vessels = []
     for vessel_id, path in vessel_configs:
         print(f"Starting vessel {vessel_id}")
-        proc = launch_vessel(vessel_id, path, ip, port, "logs")
+        proc = launch_vessel(vessel_id, path, ip, PORT, "logs")
         time.sleep(0.5)  # Give it a moment to initialize
         if proc.poll() is not None:
             console.print(

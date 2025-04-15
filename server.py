@@ -7,7 +7,7 @@ import json
 vessel_connections: set[websockets.WebSocketServerProtocol] = set()
 viewer_connections: set[websockets.WebSocketServerProtocol] = set()
 
-vessel_data: dict[dict] = {}
+vessels_data: dict[dict] = {}
 
 
 async def broadcast_updates(update_queue: asyncio.Queue):
@@ -16,7 +16,7 @@ async def broadcast_updates(update_queue: asyncio.Queue):
         id, data = await update_queue.get()
 
         # Update global state
-        vessel_data[id] = data
+        vessels_data[id] = data
 
         message = json.dumps({
             "type": "vessel_update",
@@ -62,7 +62,7 @@ async def handle_vessel_connection(websocket: websockets.WebSocketServerProtocol
         return
 
     vessel_connections.add(websocket)
-    vessel_data[id] = init_data
+    vessels_data[id] = init_data
     print(f"Client at {websocket.remote_address} identified as Vessel {id}")
 
     async for message in websocket:
@@ -76,19 +76,19 @@ async def handle_vessel_connection(websocket: websockets.WebSocketServerProtocol
 
 async def handle_viewer_connection(websocket: websockets.WebSocketServerProtocol):
     viewer_connections.add(websocket)
-    print(f"Viewer connected: {websocket.remote_address}")
+    print(f"Client at {websocket.remote_address} identified as Viewer")
 
     # Send full boat data once
     full_update = json.dumps({
         "type": "full_update",
-        "vessels": vessel_data
+        "vessels": vessels_data
     })
     await websocket.send(full_update)
 
     try:
         await websocket.wait_closed()
     finally:
-        print(f"Viewver disconnected: {websocket.remote_address}")
+        print(f"Viewer disconnected: {websocket.remote_address}")
         viewer_connections.discard(websocket)
 
 
