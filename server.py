@@ -107,7 +107,7 @@ async def handler(websocket: websockets.WebSocketServerProtocol, update_queue: a
             await handle_vessel_connection(websocket, update_queue, init_data)
 
         elif client_type == "viewer":
-            await handle_viewer_connection(websocket, update_queue)
+            await handle_viewer_connection(websocket)
 
         else:
             print(f"Invalid client type tried to connect: {websocket.remote_address}")
