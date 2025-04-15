@@ -20,11 +20,11 @@ def get_ip_address():
         sys.exit()
 
 
-def launch_server(ip, port, log_file):
+def launch_server(ip, port):
     return subprocess.Popen(
         ["python", "-u", "server.py", "--host", ip, "--port", str(port)],
-        stdout=open(log_file, "w"),
-        stderr=subprocess.STDOUT
+        stdout=None,
+        stderr=None
     )
 
 
@@ -43,17 +43,20 @@ def launch_vessel(vessel_id, path, ip, port, log_dir):
 def main():
     os.makedirs("logs", exist_ok=True)
 
-    ip = get_ip_address()
+    host = "0.0.0.0"
     port = 8000
 
     no_errors = True
 
-    print(f"Starting server at ws://{ip}:{port}")
-    server_process = launch_server(ip, port, "logs/server.log")
+    print(f"Starting server: {host}:{port}")
+    server_process = launch_server(host, port)
 
-    time.sleep(1)  # Give the server time to start
+    ip = get_ip_address()
+    console.print(f"Server can be reached from [bold blue]ws://{ip}:{port}[/]")
+
+    time.sleep(0.5)  # Give the server time to start
     if server_process.poll() is not None:
-        console.print("Server process exited early! Check logs.", style="bold red")
+        console.print("Server process exited early!", style="bold red")
         sys.exit()
 
     vessel_configs = [

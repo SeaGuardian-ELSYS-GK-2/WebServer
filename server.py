@@ -1,6 +1,7 @@
+import websockets
+import argparse
 import asyncio
 import json
-import websockets
 
 
 vessel_connections: set[websockets.WebSocketServerProtocol] = set()
@@ -56,11 +57,10 @@ async def handler(websocket: websockets.WebSocketServerProtocol, update_queue: a
             async for message in websocket:
                 try:
                     data: dict = json.loads(message)
-                    print(data.get("timestamp"), vessel_data[id].get("timestamp"))
                     # if data.get("timestamp") > boat_data.get("timestamp"):
                     await update_queue.put((id, data))
                 except json.JSONDecodeError:
-                    print(f"Invalid JSON data received from boat {id}: {message}")
+                    print(f"Invalid JSON data received from vessel {id}: {message}")
 
 
         elif client_type == "viewer":
@@ -77,6 +77,7 @@ async def handler(websocket: websockets.WebSocketServerProtocol, update_queue: a
             try:
                 await websocket.wait_closed()
             finally:
+                print(f"Viewver disconnected: {websocket.remote_address}")
                 viewer_connections.discard(websocket)
 
         else:
@@ -95,12 +96,17 @@ async def handler(websocket: websockets.WebSocketServerProtocol, update_queue: a
 
 
 async def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--port", type=int, default=8000)
+    args = parser.parse_args()
+
     update_queue = asyncio.Queue()
 
     async def handler_with_queue(websocket):
         await handler(websocket, update_queue)
 
-    async with websockets.serve(handler_with_queue, "0.0.0.0", 8000):
+    async with websockets.serve(handler_with_queue, args.host, args.port):
         await asyncio.gather(
             broadcast_updates(update_queue),
             asyncio.Future(),  # Keeps the server alive
