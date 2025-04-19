@@ -7,7 +7,7 @@ import json
 vessel_connections: set[websockets.WebSocketServerProtocol] = set()
 viewer_connections: set[websockets.WebSocketServerProtocol] = set()
 
-vessels_data: dict[dict] = {}
+vessels_data = {}
 
 
 async def broadcast_updates(update_queue: asyncio.Queue):
@@ -16,7 +16,12 @@ async def broadcast_updates(update_queue: asyncio.Queue):
         id, data = await update_queue.get()
 
         # Update global state
-        vessels_data[id] = data
+        for key, value in data.items():
+            if key != "crewupdates":
+                vessels_data[id][key] = value
+
+        for crew_member_id, crew_member_data in data["crewupdates"].items():
+            vessels_data[id]["crew"][crew_member_id] = crew_member_data
 
         message = json.dumps({
             "type": "vessel_update",

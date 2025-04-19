@@ -20,47 +20,57 @@ args = parser.parse_args()
 uri = f"ws://{args.host}:{args.port}"
 
 
-async def vessel_client(vessel_id: str, path_file: str, host: str, port: str):
+async def vessel_client(vessel_id: str, path_file: str, host: str, port: int):
     uri = f"ws://{host}:{port}"
 
-    # Load path
+    # Load config file (coordinates and crew)
     with open(path_file, 'r') as f:
-        path = json.load(f)
+        config = json.load(f)
 
-    if len(path) < 2:
-        print("Path must contain at least 2 points.")
-        return
+    if "coordinates" not in config or not isinstance(config["coordinates"], list):
+        raise ValueError("Invalid config file: missing or invalid 'coordinates' list")
+
+    if "crew" not in config or not isinstance(config["crew"], dict):
+        raise ValueError("Invalid config file: missing or invalid 'crew' dict")
+
+    coordinates = config["coordinates"]
+    crew = config["crew"]
+
+    if len(coordinates) < 2:
+        raise ValueError("Config error: 'coordinates' must contain at least 2 points.")
 
     async with websockets.connect(uri) as websocket:
+        # Initial message
         await websocket.send(json.dumps({
             "type": "vessel",
             "id": vessel_id,
-            "timestamp": time.time()
+            "timestamp": time.time(),
+            "crew": crew
         }))
 
         current_index = 0
 
         while True:
-            # Loop back to start when reaching the end
-            start = path[current_index]
-            end = path[(current_index + 1) % len(path)]
+            start = coordinates[current_index]
+            end = coordinates[(current_index + 1) % len(coordinates)]
 
             for step in range(STEPS_PER_SEGMENT):
                 alpha = step / STEPS_PER_SEGMENT
                 lat = (1 - alpha) * start["lat"] + alpha * end["lat"]
                 lng = (1 - alpha) * start["lng"] + alpha * end["lng"]
 
-                data = {
+                update = {
                     "id": vessel_id,
                     "timestamp": time.time(),
                     "lat": lat,
-                    "lng": lng
+                    "lng": lng,
+                    "crewupdates": {}  # could be used for live updates of crew if needed later
                 }
 
-                await websocket.send(json.dumps(data))
+                await websocket.send(json.dumps(update))
                 await asyncio.sleep(STEP_DURATION)
 
-            current_index = (current_index + 1) % len(path)
+            current_index = (current_index + 1) % len(coordinates)
 
 
 asyncio.run(vessel_client(args.id, args.path, args.host, args.port))

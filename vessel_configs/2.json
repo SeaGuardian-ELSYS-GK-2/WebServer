@@ -1,0 +1,27 @@
+{
+    "coordinates": [
+        { "lat": 65.446500, "lng": 11.421500 },
+        { "lat": 65.446600, "lng": 11.421800 },
+        { "lat": 65.446700, "lng": 11.422100 },
+        { "lat": 65.446500, "lng": 11.421500 }
+    ],
+
+    "crew": {
+
+        "crew_1":
+            {
+                "name": "Knut",
+                "overBoard": true,
+                "latitude": 65.2315,
+                "longitude": 11.3392
+            },
+
+        "crew_2":
+            {
+                "name": "Roger",
+                "overBoard": true,
+                "latitude": 65.4315,
+                "longitude": 11.5292
+            }
+    }
+}

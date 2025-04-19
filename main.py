@@ -57,9 +57,9 @@ def main():
         sys.exit()
 
     vessel_configs = [
-        (1, "vessel_paths/1.json"),
-        (2, "vessel_paths/2.json"),
-        (3, "vessel_paths/3.json"),
+        (1, "vessel_configs/1.json"),
+        (2, "vessel_configs/2.json"),
+        (3, "vessel_configs/3.json"),
     ]
 
     no_errors = True
