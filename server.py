@@ -22,9 +22,10 @@ async def broadcast_updates(update_queue: asyncio.Queue):
 
         for crew_member_id, crew_member_data in data["crewupdates"].items():
             crew_member = vessels_data[id]["crew"][crew_member_id]
-            crew_member["latitude"] = crew_member_data["latitude"]
-            crew_member["longitude"] = crew_member_data["longitude"]
             crew_member["overBoard"] = crew_member_data["overBoard"]
+            if crew_member["overBoard"]:
+                crew_member["latitude"] = crew_member_data["latitude"]
+                crew_member["longitude"] = crew_member_data["longitude"]
 
         message = json.dumps({
             "type": "vessel_update",
