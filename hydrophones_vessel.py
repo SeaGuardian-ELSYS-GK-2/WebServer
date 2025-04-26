@@ -12,7 +12,6 @@ import time
 
 
 STEP_DURATION = 2  # seconds between updates
-OVERBOARD_THRESHOLD = 900  # mV
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--id", type=str, default="5")
